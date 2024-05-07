@@ -11,10 +11,10 @@ EXPOSE 443
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ProyectoApiHistorias/ProyectoApiHistorias.csproj", "ProyectoApiHistorias/"]
-RUN dotnet restore "./ProyectoApiHistorias/ProyectoApiHistorias.csproj"
+COPY ["ProyectoApiHistorias.csproj", "."]
+RUN dotnet restore "./ProyectoApiHistorias.csproj"
 COPY . .
-WORKDIR "/src/ProyectoApiHistorias"
+WORKDIR "/src/."
 RUN dotnet build "./ProyectoApiHistorias.csproj" -c %BUILD_CONFIGURATION% -o /app/build
 
 FROM build AS publish
