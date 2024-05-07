@@ -27,7 +27,7 @@ var database = mongoClient.GetDatabase(builder.Configuration.GetSection("MongoDa
 builder.Services.AddSingleton(database);
 
 // Crear una instancia de MedicalHistoryService y registrarla como un servicio de ámbito
-builder.Services.AddScoped<IMedicalHistoryService, MedicalHistoryService>();
+builder.Services.AddScoped<MedicalHistoryService>();
 
 var app = builder.Build();
 

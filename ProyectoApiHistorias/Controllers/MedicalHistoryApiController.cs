@@ -11,9 +11,9 @@ namespace MedicalHistoryAPI.Controllers
     [Route("api/[controller]")]
     public class MedicalHistoriesController : ControllerBase
     {
-        private readonly IMedicalHistoryService _medicalHistoryService;
+        private readonly MedicalHistoryService _medicalHistoryService;
 
-        public MedicalHistoriesController(IMedicalHistoryService medicalHistoryService)
+        public MedicalHistoriesController(MedicalHistoryService medicalHistoryService)
         {
             _medicalHistoryService = medicalHistoryService;
         }
@@ -173,48 +173,5 @@ namespace MedicalHistoryAPI.Controllers
             await _medicalHistoryService.DeleteProcedureAsync(medicalHistoryId, procedureId);
             return NoContent();
         }
-        // Endpoint para obtener un archivo adjunto específico de un historial médico
-        [HttpGet("{medicalHistoryId}/attachments/{attachmentId}")]
-        public async Task<ActionResult<Attachment>> GetAttachment(string medicalHistoryId, string attachmentId)
-        {
-            var attachment = await _medicalHistoryService.GetAttachmentAsync(medicalHistoryId, attachmentId);
-            if (attachment == null)
-            {
-                return NotFound();
-            }
-            return Ok(attachment);
-        }
-
-        // Endpoint para agregar un archivo adjunto a un historial médico
-        [HttpPost("{medicalHistoryId}/attachments")]
-        public async Task<ActionResult<Attachment>> AddAttachment(string medicalHistoryId, [FromForm] AttachmentRequest attachmentRequest)
-        {
-            if (attachmentRequest.File.Length > 0)
-            {
-                using var ms = new MemoryStream();
-                await attachmentRequest.File.CopyToAsync(ms);
-                var fileBytes = ms.ToArray();
-
-                var attachment = new Attachment
-                {
-                    FileName = attachmentRequest.FileName,
-                    FilePath = Convert.ToBase64String(fileBytes)
-                };
-
-                var createdAttachment = await _medicalHistoryService.AddAttachmentAsync(medicalHistoryId, attachment);
-                return CreatedAtAction(nameof(GetAttachment), new { medicalHistoryId = medicalHistoryId, attachmentId = createdAttachment.Id }, createdAttachment);
-            }
-
-            return BadRequest();
-        }
-
-        // Endpoint para eliminar un archivo adjunto de un historial médico
-        [HttpDelete("{medicalHistoryId}/attachments/{attachmentId}")]
-        public async Task<IActionResult> DeleteAttachment(string medicalHistoryId, string attachmentId)
-        {
-            await _medicalHistoryService.DeleteAttachmentAsync(medicalHistoryId, attachmentId);
-            return NoContent();
-        }
-
     }
 }

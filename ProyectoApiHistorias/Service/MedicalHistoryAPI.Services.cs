@@ -1,152 +1,209 @@
 ﻿using MedicalHistoryAPI.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Threading.Tasks;
+using ProyectoApiHistorias.Controllers;
+
 
 namespace MedicalHistoryAPI.Services
 {
-    public interface IMedicalHistoryService
+    public class MedicalHistoryService
     {
-        Task<MedicalHistory> GetMedicalHistoryAsync(string id);
-        Task<MedicalHistory> CreateMedicalHistoryAsync(MedicalHistory medicalHistory);
-        Task UpdateMedicalHistoryAsync(string id, MedicalHistory medicalHistory);
-        Task DeleteMedicalHistoryAsync(string id);
+        private readonly IMongoCollection<MedicalHistory> _medicalHistories;
 
-        Task<Diagnostic> GetDiagnosticAsync(string medicalHistoryId, string diagnosticId);
-        Task<Diagnostic> AddDiagnosticAsync(string medicalHistoryId, Diagnostic diagnostic);
-        Task UpdateDiagnosticAsync(string medicalHistoryId, string diagnosticId, Diagnostic diagnostic);
-        Task DeleteDiagnosticAsync(string medicalHistoryId, string diagnosticId);
-
-        Task<Treatment> GetTreatmentAsync(string medicalHistoryId, string treatmentId);
-        Task<Treatment> AddTreatmentAsync(string medicalHistoryId, Treatment treatment);
-        Task UpdateTreatmentAsync(string medicalHistoryId, string treatmentId, Treatment treatment);
-        Task DeleteTreatmentAsync(string medicalHistoryId, string treatmentId);
-
-        Task<Procedure> GetProcedureAsync(string medicalHistoryId, string procedureId);
-        Task<Procedure> AddProcedureAsync(string medicalHistoryId, Procedure procedure);
-        Task UpdateProcedureAsync(string medicalHistoryId, string procedureId, Procedure procedure);
-        Task DeleteProcedureAsync(string medicalHistoryId, string procedureId);
-
-        Task<Attachment> GetAttachmentAsync(string medicalHistoryId, string attachmentId);
-        Task<Attachment> AddAttachmentAsync(string medicalHistoryId, Attachment attachment);
-        Task DeleteAttachmentAsync(string medicalHistoryId, string attachmentId);
-    }
-
-    public class MedicalHistoryService : IMedicalHistoryService
-    {
-        private readonly IMongoCollection<MedicalHistory> _medicalHistoryCollection;
-
-        public MedicalHistoryService(IMongoDatabase database)
+        public MedicalHistoryService(IMongoDatabaseSettings settings)
         {
-            _medicalHistoryCollection = database.GetCollection<MedicalHistory>("MedicalHistories");
+            var client = new MongoClient(settings.ConnectionString);
+            var database = client.GetDatabase(settings.DatabaseName);
+
+            _medicalHistories = database.GetCollection<MedicalHistory>("MedicalHistories");
         }
 
-        public Task<Attachment> AddAttachmentAsync(string medicalHistoryId, Attachment attachment)
+        public async Task<MedicalHistory> GetMedicalHistoryAsync(string id)
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<Diagnostic> AddDiagnosticAsync(string medicalHistoryId, Diagnostic diagnostic)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Procedure> AddProcedureAsync(string medicalHistoryId, Procedure procedure)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<Treatment> AddTreatmentAsync(string medicalHistoryId, Treatment treatment)
-        {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, id);
+            return await _medicalHistories.Find(filter).FirstOrDefaultAsync();
         }
 
         public async Task<MedicalHistory> CreateMedicalHistoryAsync(MedicalHistory medicalHistory)
         {
             var newId = ObjectId.GenerateNewId();
-
-            // Asignar el nuevo ObjectId al campo Id del UserModel
             medicalHistory.Id = newId.ToString();
 
-            await _medicalHistoryCollection.InsertOneAsync(medicalHistory);
+            await _medicalHistories.InsertOneAsync(medicalHistory);
             return medicalHistory;
         }
 
-        public Task DeleteAttachmentAsync(string medicalHistoryId, string attachmentId)
+        public async Task UpdateMedicalHistoryAsync(string id, MedicalHistory medicalHistory)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, id);
+
+            var update = Builders<MedicalHistory>.Update
+                .Set(m => m.PatientId, medicalHistory.PatientId)
+                .Set(m => m.Diagnostics, medicalHistory.Diagnostics)
+                .Set(m => m.Treatments, medicalHistory.Treatments)
+                .Set(m => m.Procedures, medicalHistory.Procedures);
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task DeleteDiagnosticAsync(string medicalHistoryId, string diagnosticId)
+        public async Task DeleteMedicalHistoryAsync(string id)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, id);
+
+            await _medicalHistories.DeleteOneAsync(filter);
         }
 
-        public Task DeleteMedicalHistoryAsync(string id)
+        public async Task<Diagnostic> GetDiagnosticAsync(string medicalHistoryId, string diagnosticId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var medicalHistory = await _medicalHistories.Find(filter).FirstOrDefaultAsync();
+
+            if (medicalHistory == null)
+            {
+                return null;
+            }
+
+            var diagnostic = medicalHistory.Diagnostics.FirstOrDefault(d => d.Id == diagnosticId);
+
+            return diagnostic;
         }
 
-        public Task DeleteProcedureAsync(string medicalHistoryId, string procedureId)
+        public async Task<Diagnostic> AddDiagnosticAsync(string medicalHistoryId, Diagnostic diagnostic)
         {
-            throw new NotImplementedException();
+            var newId = ObjectId.GenerateNewId();
+            diagnostic.Id = newId.ToString();
+
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.Push(m => m.Diagnostics, diagnostic);
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
+
+            return diagnostic;
         }
 
-        public Task DeleteTreatmentAsync(string medicalHistoryId, string treatmentId)
+        public async Task UpdateDiagnosticAsync(string medicalHistoryId, string diagnosticId, Diagnostic diagnostic)
         {
-            throw new NotImplementedException();
+    
+            var filter = Builders<MedicalHistory>.Filter.And(
+            Builders<MedicalHistory>.Filter.Eq("_id", medicalHistoryId),
+            Builders<MedicalHistory>.Filter.ElemMatch("Diagnostics", Builders<Diagnostic>.Filter.Eq("Id", diagnosticId))
+               );
+
+            var update = Builders<MedicalHistory>.Update
+                .Set("Diagnostics.$", diagnostic); // Usa el operador de posición $ para actualizar el diagnóstico específico
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task<Attachment> GetAttachmentAsync(string medicalHistoryId, string attachmentId)
+        public async Task DeleteDiagnosticAsync(string medicalHistoryId, string diagnosticId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.PullFilter(m => m.Diagnostics, Builders<Diagnostic>.Filter.Eq(d => d.Id, diagnosticId));
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task<Diagnostic> GetDiagnosticAsync(string medicalHistoryId, string diagnosticId)
+        public async Task<Treatment> GetTreatmentAsync(string medicalHistoryId, string treatmentId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var medicalHistory = await _medicalHistories.Find(filter).FirstOrDefaultAsync();
+
+            if (medicalHistory == null)
+            {
+                return null;
+            }
+
+            var treatment = medicalHistory.Treatments.FirstOrDefault(t => t.Id == treatmentId);
+
+            return treatment;
         }
 
-        public async Task<MedicalHistory> GetMedicalHistoryAsync(string id)
+        public async Task<Treatment> AddTreatmentAsync(string medicalHistoryId, Treatment treatment)
         {
-            var filter = Builders<MedicalHistory>.Filter.Eq("_id", id);
-            return await _medicalHistoryCollection.Find(filter).FirstOrDefaultAsync();
+            var newId = ObjectId.GenerateNewId();
+            treatment.Id = newId.ToString();
+
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.Push(m => m.Treatments, treatment);
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
+
+            return treatment;
         }
 
-
-        public Task<Procedure> GetProcedureAsync(string medicalHistoryId, string procedureId)
+        public async Task UpdateTreatmentAsync(string medicalHistoryId, string treatmentId, Treatment treatment)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.And(
+            Builders<MedicalHistory>.Filter.Eq("_id", medicalHistoryId),
+            Builders<MedicalHistory>.Filter.ElemMatch("Treatments", Builders<Treatment>.Filter.Eq("Id", treatmentId))
+               );
+
+            var update = Builders<MedicalHistory>.Update
+                .Set("Treatments.$", treatment); // Usa el operador de posición $ para actualizar el diagnóstico específico
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task<Treatment> GetTreatmentAsync(string medicalHistoryId, string treatmentId)
+        public async Task DeleteTreatmentAsync(string medicalHistoryId, string treatmentId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.PullFilter(m => m.Treatments, Builders<Treatment>.Filter.Eq(d => d.Id, treatmentId));
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task UpdateDiagnosticAsync(string medicalHistoryId, string diagnosticId, Diagnostic diagnostic)
+        public async Task<Procedure> GetProcedureAsync(string medicalHistoryId, string procedureId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var medicalHistory = await _medicalHistories.Find(filter).FirstOrDefaultAsync();
+
+            if (medicalHistory == null)
+            {
+                return null;
+            }
+
+            var procedure = medicalHistory.Procedures.FirstOrDefault(t => t.Id == procedureId);
+
+            return procedure;
         }
 
-        public Task UpdateMedicalHistoryAsync(string id, MedicalHistory medicalHistory)
+        public async Task<Procedure> AddProcedureAsync(string medicalHistoryId, Procedure procedure)
         {
-            throw new NotImplementedException();
+            var newId = ObjectId.GenerateNewId();
+            procedure.Id = newId.ToString();
+
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.Push(m => m.Procedures, procedure);
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
+
+            return procedure;
         }
 
-        public Task UpdateProcedureAsync(string medicalHistoryId, string procedureId, Procedure procedure)
+        public async Task UpdateProcedureAsync(string medicalHistoryId, string procedureId, Procedure procedure)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.And(
+            Builders<MedicalHistory>.Filter.Eq("_id", medicalHistoryId),
+            Builders<MedicalHistory>.Filter.ElemMatch("Procedures", Builders<Procedure>.Filter.Eq("Id", procedureId))
+               );
+
+            var update = Builders<MedicalHistory>.Update
+                .Set("Procedures.$", procedure); // Usa el operador de posición $ para actualizar el diagnóstico específico
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        public Task UpdateTreatmentAsync(string medicalHistoryId, string treatmentId, Treatment treatment)
+        public async Task DeleteProcedureAsync(string medicalHistoryId, string procedureId)
         {
-            throw new NotImplementedException();
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.Id, medicalHistoryId);
+            var update = Builders<MedicalHistory>.Update.PullFilter(m => m.Procedures, Builders<Procedure>.Filter.Eq(d => d.Id, procedureId));
+
+            await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
-        // Implementa los métodos de la interfaz aquí
     }
 }
+
 
 namespace ProyectoApiHistorias.Controllers
 {
