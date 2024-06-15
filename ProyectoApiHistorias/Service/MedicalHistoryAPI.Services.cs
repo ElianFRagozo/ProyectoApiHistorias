@@ -201,6 +201,13 @@ namespace MedicalHistoryAPI.Services
             await _medicalHistories.UpdateOneAsync(filter, update);
         }
 
+         public async Task<IEnumerable<MedicalHistory>> GetMedicalHistoriesByPatientAsync(string patientId)
+        {
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.PatientId, patientId);
+            var medicalHistories = await _medicalHistories.Find(filter).ToListAsync();
+            return medicalHistories;
+        }
+
     }
 }
 

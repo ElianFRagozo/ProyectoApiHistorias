@@ -173,5 +173,17 @@ namespace MedicalHistoryAPI.Controllers
             await _medicalHistoryService.DeleteProcedureAsync(medicalHistoryId, procedureId);
             return NoContent();
         }
+
+        [HttpGet("patient/{patientId}")]
+        public async Task<ActionResult<IEnumerable<MedicalHistory>>> GetMedicalHistoriesByPatient(string patientId)
+        {
+            var medicalHistories = await _medicalHistoryService.GetMedicalHistoriesByPatientAsync(patientId);
+            if (medicalHistories == null || !medicalHistories.Any())
+            {
+                return NotFound("No se encontraron historias médicas para el paciente especificado.");
+            }
+            return Ok(medicalHistories);
+        }
+
     }
 }
