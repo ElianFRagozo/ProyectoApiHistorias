@@ -208,6 +208,12 @@ namespace MedicalHistoryAPI.Services
             return medicalHistories;
         }
 
+        public async Task<MedicalHistory> GetMedicalHistoryByIdCitaAsync(string idCita)
+        {
+            var filter = Builders<MedicalHistory>.Filter.Eq(m => m.IdCita, idCita);
+            return await _medicalHistories.Find(filter).FirstOrDefaultAsync();
+        }
+
     }
 }
 

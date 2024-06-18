@@ -2,8 +2,8 @@
 using MedicalHistoryAPI.Models;
 using MedicalHistoryAPI.Services;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 
 namespace MedicalHistoryAPI.Controllers
 {
@@ -32,10 +32,10 @@ namespace MedicalHistoryAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<MedicalHistory>> CreateMedicalHistory([FromBody] MedicalHistory medicalHistory)
         {
-        
+            medicalHistory.FechaCreacion = DateTime.UtcNow;
+
             var createdMedicalHistory = await _medicalHistoryService.CreateMedicalHistoryAsync(medicalHistory);
             return CreatedAtAction(nameof(GetMedicalHistory), new { id = createdMedicalHistory.Id }, createdMedicalHistory);
-
         }
 
         [HttpPut("{id}")]
@@ -67,7 +67,6 @@ namespace MedicalHistoryAPI.Controllers
             return Ok(diagnostic);
         }
 
-        // Endpoint para agregar un diagnóstico a un historial médico
         [HttpPost("{medicalHistoryId}/diagnostics")]
         public async Task<ActionResult<Diagnostic>> AddDiagnostic(string medicalHistoryId, [FromBody] Diagnostic diagnostic)
         {
@@ -75,7 +74,6 @@ namespace MedicalHistoryAPI.Controllers
             return CreatedAtAction(nameof(GetDiagnostic), new { medicalHistoryId = medicalHistoryId, diagnosticId = createdDiagnostic.Id }, createdDiagnostic);
         }
 
-        // Endpoint para actualizar un diagnóstico de un historial médico
         [HttpPut("{medicalHistoryId}/diagnostics/{diagnosticId}")]
         public async Task<IActionResult> UpdateDiagnostic(string medicalHistoryId, string diagnosticId, [FromBody] Diagnostic diagnostic)
         {
@@ -87,14 +85,13 @@ namespace MedicalHistoryAPI.Controllers
             return NoContent();
         }
 
-        // Endpoint para eliminar un diagnóstico de un historial médico
         [HttpDelete("{medicalHistoryId}/diagnostics/{diagnosticId}")]
         public async Task<IActionResult> DeleteDiagnostic(string medicalHistoryId, string diagnosticId)
         {
             await _medicalHistoryService.DeleteDiagnosticAsync(medicalHistoryId, diagnosticId);
             return NoContent();
         }
-        // Endpoint para obtener un tratamiento específico de un historial médico
+
         [HttpGet("{medicalHistoryId}/treatments/{treatmentId}")]
         public async Task<ActionResult<Treatment>> GetTreatment(string medicalHistoryId, string treatmentId)
         {
@@ -106,7 +103,6 @@ namespace MedicalHistoryAPI.Controllers
             return Ok(treatment);
         }
 
-        // Endpoint para agregar un tratamiento a un historial médico
         [HttpPost("{medicalHistoryId}/treatments")]
         public async Task<ActionResult<Treatment>> AddTreatment(string medicalHistoryId, [FromBody] Treatment treatment)
         {
@@ -114,7 +110,6 @@ namespace MedicalHistoryAPI.Controllers
             return CreatedAtAction(nameof(GetTreatment), new { medicalHistoryId = medicalHistoryId, treatmentId = createdTreatment.Id }, createdTreatment);
         }
 
-        // Endpoint para actualizar un tratamiento de un historial médico
         [HttpPut("{medicalHistoryId}/treatments/{treatmentId}")]
         public async Task<IActionResult> UpdateTreatment(string medicalHistoryId, string treatmentId, [FromBody] Treatment treatment)
         {
@@ -126,7 +121,6 @@ namespace MedicalHistoryAPI.Controllers
             return NoContent();
         }
 
-        // Endpoint para eliminar un tratamiento de un historial médico
         [HttpDelete("{medicalHistoryId}/treatments/{treatmentId}")]
         public async Task<IActionResult> DeleteTreatment(string medicalHistoryId, string treatmentId)
         {
@@ -134,7 +128,6 @@ namespace MedicalHistoryAPI.Controllers
             return NoContent();
         }
 
-        // Endpoint para obtener un procedimiento específico de un historial médico
         [HttpGet("{medicalHistoryId}/procedures/{procedureId}")]
         public async Task<ActionResult<Procedure>> GetProcedure(string medicalHistoryId, string procedureId)
         {
@@ -146,7 +139,6 @@ namespace MedicalHistoryAPI.Controllers
             return Ok(procedure);
         }
 
-        // Endpoint para agregar un procedimiento a un historial médico
         [HttpPost("{medicalHistoryId}/procedures")]
         public async Task<ActionResult<Procedure>> AddProcedure(string medicalHistoryId, [FromBody] Procedure procedure)
         {
@@ -154,7 +146,6 @@ namespace MedicalHistoryAPI.Controllers
             return CreatedAtAction(nameof(GetProcedure), new { medicalHistoryId = medicalHistoryId, procedureId = createdProcedure.Id }, createdProcedure);
         }
 
-        // Endpoint para actualizar un procedimiento de un historial médico
         [HttpPut("{medicalHistoryId}/procedures/{procedureId}")]
         public async Task<IActionResult> UpdateProcedure(string medicalHistoryId, string procedureId, [FromBody] Procedure procedure)
         {
@@ -166,7 +157,6 @@ namespace MedicalHistoryAPI.Controllers
             return NoContent();
         }
 
-        // Endpoint para eliminar un procedimiento de un historial médico
         [HttpDelete("{medicalHistoryId}/procedures/{procedureId}")]
         public async Task<IActionResult> DeleteProcedure(string medicalHistoryId, string procedureId)
         {
@@ -182,8 +172,19 @@ namespace MedicalHistoryAPI.Controllers
             {
                 return NotFound("No se encontraron historias médicas para el paciente especificado.");
             }
+
             return Ok(medicalHistories);
         }
 
+        [HttpGet("cita/{idCita}")]
+        public async Task<ActionResult<MedicalHistory>> GetMedicalHistoryByIdCita(string idCita)
+        {
+            var medicalHistory = await _medicalHistoryService.GetMedicalHistoryByIdCitaAsync(idCita);
+            if (medicalHistory == null)
+            {
+                return NotFound();
+            }
+            return Ok(medicalHistory);
+        }
     }
 }

@@ -12,11 +12,25 @@ namespace MedicalHistoryAPI.Models
 
         public string PatientId { get; set; }
 
+        [BsonElement("MedicoId")]
+        public string MedicoId { get; set; }
+
+        public string IdCita { get; set; }
+
+        [BsonElement("MedicoNombre")]
+        public string MedicoNombre { get; set; }
+
+        [BsonElement("MedicoEspecialidad")]
+        public string MedicoEspecialidad { get; set; }
+
         public List<Diagnostic> Diagnostics { get; set; }
 
         public List<Treatment> Treatments { get; set; }
 
         public List<Procedure> Procedures { get; set; }
+
+        
+        public DateTime FechaCreacion { get; set; }
 
     }
 
